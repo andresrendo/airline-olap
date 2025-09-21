@@ -5,7 +5,7 @@ const pool = new Pool({
   port: Number(process.env.PG_PORT || 55432),
   database: process.env.PG_DB || 'airline_pg',
   user: process.env.PG_USER || 'admin',
-  password: process.env.PG_PASSWORD || ''
+  password: String(process.env.PG_PASSWORD ?? '').trim()
 });
 
 module.exports = {

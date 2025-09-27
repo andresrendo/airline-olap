@@ -1,6 +1,7 @@
 require('dotenv').config();
 
 const { monitorDb } = require('./controllers/monitorController');
+const { getDockerStats } = require('./monitoring/resourceMonitor');
 
 const express = require('express');
 const cors = require('cors');
@@ -13,6 +14,16 @@ const { getRevenueByCountry } = require('./controllers/revenueController');
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+//Docker stats endpoint
+app.get('/api/monitor/docker-stats', async (req, res) => {
+  try {
+    const stats = await getDockerStats();
+    res.json({ ok: true, stats });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: String(e) });
+  }
+});
 
 // Monitoring endpoint
 app.get('/api/monitor/:db', monitorDb);

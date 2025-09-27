@@ -10,6 +10,9 @@ const pg = require('./db/postgres');
 const monet = require('./db/monetdb');
 const { getTopRoutes } = require('./controllers/topRoutesController');
 const { getRevenueByCountry } = require('./controllers/revenueController');
+const { getTicketsByWeekday } = require('./controllers/ticketsByDayController');
+const { getLeastTravelledNationality } = require('./controllers/leastTravelledController');
+
 
 const app = express();
 app.use(cors());
@@ -27,6 +30,12 @@ app.get('/api/monitor/docker-stats', async (req, res) => {
 
 // Monitoring endpoint
 app.get('/api/monitor/:db', monitorDb);
+
+app.get('/api/olap/tickets-by-weekday', getTicketsByWeekday);
+
+app.get('/api/olap/least-travelled-nationality', getLeastTravelledNationality);
+
+
 
 // Health endpoints
 app.get('/api/health', (req, res) => {

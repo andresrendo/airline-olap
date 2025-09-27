@@ -12,6 +12,11 @@ const { getTopRoutes } = require('./controllers/topRoutesController');
 const { getRevenueByCountry } = require('./controllers/revenueController');
 const { getTicketsByWeekday } = require('./controllers/ticketsByDayController');
 const { getLeastTravelledNationality } = require('./controllers/leastTravelledController');
+const { getRevenueBySeatClassAndMonth } = require('./controllers/revenueBySeatController');
+const { getRevenueAccumulated } = require('./controllers/revenueAccumController');
+const { getDelayedAverage } = require('./controllers/delayedAverageController');
+const { getPassengersByAircraft } = require('./controllers/passengersByAircraftController');
+
 
 
 const app = express();
@@ -34,6 +39,14 @@ app.get('/api/monitor/:db', monitorDb);
 app.get('/api/olap/tickets-by-weekday', getTicketsByWeekday);
 
 app.get('/api/olap/least-travelled-nationality', getLeastTravelledNationality);
+
+app.get('/api/olap/revenue-by-seatclass-month', getRevenueBySeatClassAndMonth);
+
+app.get('/api/olap/revenue-accumulated', getRevenueAccumulated);
+
+app.get('/api/olap/delayed-average', getDelayedAverage);
+app.get('/api/olap/passengers-by-aircraft', getPassengersByAircraft);
+
 
 
 

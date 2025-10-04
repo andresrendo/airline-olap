@@ -16,6 +16,10 @@ const { getRevenueBySeatClassAndMonth } = require('./controllers/revenueBySeatCo
 const { getRevenueAccumulated } = require('./controllers/revenueAccumController');
 const { getDelayedAverage } = require('./controllers/delayedAverageController');
 const { getPassengersByAircraft } = require('./controllers/passengersByAircraftController');
+const { getAdjustedProfitRoutes } = require('./controllers/adjustedProfitRoutesController');
+const { getFrequentPassengerRevenue } = require('./controllers/frequentPassengerRevenueController');
+
+
 
 
 
@@ -46,6 +50,8 @@ app.get('/api/olap/revenue-accumulated', getRevenueAccumulated);
 
 app.get('/api/olap/delayed-average', getDelayedAverage);
 app.get('/api/olap/passengers-by-aircraft', getPassengersByAircraft);
+app.get('/api/olap/adjusted-profit-routes', getAdjustedProfitRoutes);
+app.get('/api/olap/frequent-passenger-revenue', getFrequentPassengerRevenue);
 
 
 

@@ -18,7 +18,7 @@ function getConn() {
     password,
     language: 'sql',  // importante
     // opcionales:
-    // autocommit: true,
+    autocommit: true,
     // timezone: 'UTC'
   });
 }

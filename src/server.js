@@ -18,10 +18,8 @@ const { getDelayedAverage } = require('./controllers/delayedAverageController');
 const { getPassengersByAircraft } = require('./controllers/passengersByAircraftController');
 const { getAdjustedProfitRoutes } = require('./controllers/adjustedProfitRoutesController');
 const { getFrequentPassengerRevenue } = require('./controllers/frequentPassengerRevenueController');
-
-
-
-
+// Cambiado: importar los nombres que exporta flightDataController
+const { generateFlights, deleteGeneratedFlights } = require('./controllers/flightDataController');
 
 const app = express();
 app.use(cors());
@@ -52,7 +50,9 @@ app.get('/api/olap/delayed-average', getDelayedAverage);
 app.get('/api/olap/passengers-by-aircraft', getPassengersByAircraft);
 app.get('/api/olap/adjusted-profit-routes', getAdjustedProfitRoutes);
 app.get('/api/olap/frequent-passenger-revenue', getFrequentPassengerRevenue);
-
+// Mantener las rutas que usa el frontend, pero enlazarlas con las funciones correctas
+app.post('/api/olap/add-flights', generateFlights);
+app.post('/api/olap/remove-flights', deleteGeneratedFlights);
 
 
 

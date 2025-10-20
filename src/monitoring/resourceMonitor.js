@@ -4,18 +4,38 @@ const { exec } = require('child_process');
 // Obtiene stats de Docker para los contenedores especificados
 function getDockerStats(containers = ['runmonet-postgres-1', 'runmonet-monetdb-1']) {
   return new Promise((resolve) => {
-    const cmd = `docker stats --no-stream --format "{{.Name}}:{{.CPUPerc}}:{{.MemUsage}}" ${containers.join(' ')}`;
+    // añadir BlockIO y NetIO al formato
+    const cmd = `docker stats --no-stream --format "{{.Name}}:{{.CPUPerc}}:{{.MemUsage}}:{{.BlockIO}}:{{.NetIO}}" ${containers.join(' ')}`;
     // Timeout de 3 segundos para evitar bloqueos
     exec(cmd, { timeout: 3000 }, (err, stdout, stderr) => {
       if (err) {
         resolve({ error: 'No se pudo obtener datos de Docker. Verifica permisos y que Docker esté corriendo.' });
         return;
       }
-      const lines = stdout.trim().split('\n');
+      const out = String(stdout || '').trim();
+      if (!out) {
+        resolve({});
+        return;
+      }
+      const lines = out.split('\n');
       const stats = {};
       lines.forEach(line => {
-        const [name, cpu, mem] = line.split(':');
-        stats[name] = { cpu, mem };
+        // formato esperado: Name:CPUPerc:MemUsage:BlockIO:NetIO
+        const parts = line.split(':');
+        // nombre puede contener ":" raramente; tomar primeros 5 campos desde la derecha
+        // para mayor robustez, recomponer:
+        if (parts.length >= 5) {
+          const netio = parts.pop();
+          const blockio = parts.pop();
+          const mem = parts.pop();
+          const cpu = parts.pop();
+          const name = parts.join(':');
+          stats[name] = { cpu: cpu.trim(), mem: mem.trim(), blockio: blockio.trim(), netio: netio.trim() };
+        } else {
+          // fallback sencillo
+          const [name, cpu = '-', mem = '-'] = parts;
+          stats[name || 'unknown'] = { cpu: (cpu || '-').trim(), mem: (mem || '-').trim(), blockio: '-', netio: '-' };
+        }
       });
       resolve(stats);
     });

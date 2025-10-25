@@ -23,10 +23,40 @@ const {
   generateFlights: generateFlightsNew,
   deleteGeneratedFlights: deleteGeneratedFlightsNew
 } = require('./controllers/datacontrollers/flightControllerNew');
+// row-by-row (usa flightGeneratorNew para generar y flightDeleterNew para borrar)
+const { generateFlights: generateFlightsRow } =
+  require('./controllers/datacontrollers/flightGeneratorNew');
+const { deleteGeneratedFlights: deleteFlightsRow } =
+  require('./controllers/datacontrollers/flightDeleterNew');
+const { generateFlightsBatch } = require('./controllers/datacontrollers/addWithBatch');
+const { deleteWithBatch } = require('./controllers/datacontrollers/deleteWithBatch');
+const { getQuerySql } = require('./controllers/querySqlController');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+// helper seguro para registrar rutas y comprobar tipos
+function registerPost(path, handler, name) {
+  if (typeof handler !== 'function') {
+    console.error(`Route handler for ${path} (${name}) is not a function. typeof=${typeof handler}`);
+    throw new TypeError(`Handler for ${path} (${name}) must be a function`);
+  }
+  app.post(path, handler);
+}
+
+// reemplaza las llamadas directas a app.post(...) por registerPost(...)
+registerPost('/api/olap/add-flights', generateFlights, 'generateFlights');
+registerPost('/api/olap/remove-flights', deleteGeneratedFlights, 'deleteGeneratedFlights');
+
+registerPost('/api/olap/add-flights-new', generateFlightsNew, 'generateFlightsNew');
+registerPost('/api/olap/remove-flights-new', deleteGeneratedFlightsNew, 'deleteGeneratedFlightsNew');
+
+registerPost('/api/olap/add-flights-row', generateFlightsRow, 'generateFlightsRow');
+registerPost('/api/olap/remove-flights-row', deleteFlightsRow, 'deleteFlightsRow');
+
+registerPost('/api/olap/add-flights-batch', generateFlightsBatch, 'generateFlightsBatch');
+registerPost('/api/olap/remove-flights-batch', deleteWithBatch, 'deleteWithBatch');
 
 //Docker stats endpoint
 app.get('/api/monitor/docker-stats', async (req, res) => {
@@ -53,14 +83,7 @@ app.get('/api/olap/delayed-average', getDelayedAverage);
 app.get('/api/olap/passengers-by-aircraft', getPassengersByAircraft);
 app.get('/api/olap/adjusted-profit-routes', getAdjustedProfitRoutes);
 app.get('/api/olap/frequent-passenger-revenue', getFrequentPassengerRevenue);
-// Mantener las rutas que usa el frontend, pero enlazarlas con las funciones correctas
-app.post('/api/olap/add-flights', generateFlights);
-app.post('/api/olap/remove-flights', deleteGeneratedFlights);
-
-app.post('/api/olap/add-flights-new', generateFlightsNew);
-app.post('/api/olap/remove-flights-new', deleteGeneratedFlightsNew);
-
-
+app.get('/api/olap/query-sql', getQuerySql);
 
 
 // Health endpoints

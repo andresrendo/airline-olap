@@ -1,7 +1,8 @@
 function topRoutesSQL(year, limit = 10) {
   const y = Number.parseInt(year, 10);
   const lim = Number.parseInt(limit, 10) || 10;
-  if (!Number.isFinite(y)) throw new Error('year inválido');
+  // si no se pasa año válido, usa el año actual
+  const useYear = Number.isFinite(y) ? y : new Date().getFullYear();
 
   return `
     SELECT
@@ -19,7 +20,7 @@ function topRoutesSQL(year, limit = 10) {
     JOIN airline_dw.dim_airport dep ON fl.departure_airport_id = dep.airport_id
     JOIN airline_dw.dim_airport arr ON fl.arrival_airport_id = arr.airport_id
     JOIN airline_dw.dim_date d ON fm.date_id = d.date_id
-    WHERE d."year" = ${y}
+    WHERE d."year" = ${useYear}
     GROUP BY dep.airport_name, arr.airport_name
     ORDER BY revenue DESC
     LIMIT ${lim}

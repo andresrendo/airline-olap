@@ -4,7 +4,14 @@ const { monitorDb } = require('./controllers/monitorController');
 const { getDockerStats } = require('./monitoring/resourceMonitor');
 
 const express = require('express');
+const app = express();
+const monitorRouter = require('./routes/monitor');
+
+app.use(express.json());
 const cors = require('cors');
+app.use(cors());
+
+app.use('/api/monitor', monitorRouter);
 
 const pg = require('./db/postgres');
 const monet = require('./db/monetdb');
@@ -31,10 +38,6 @@ const { deleteGeneratedFlights: deleteFlightsRow } =
 const { generateFlightsBatch } = require('./controllers/datacontrollers/addWithBatch');
 const { deleteWithBatch } = require('./controllers/datacontrollers/deleteWithBatch');
 const { getQuerySql } = require('./controllers/querySqlController');
-
-const app = express();
-app.use(cors());
-app.use(express.json());
 
 // helper seguro para registrar rutas y comprobar tipos
 function registerPost(path, handler, name) {

@@ -3,7 +3,11 @@ const os = require('os');
 const { exec, execFile } = require('child_process');
 // Obtiene stats de Docker para los contenedores especificados
 
-// helper: ejecuta 'docker' con args (no pasa por shell -> evita problemas de quoting en Windows)
+// --- estado previo (en memoria del proceso) para calcular deltas ---
+let prevMonetBytes = null;
+let prevPgSizes = {}; // map datname -> bytes
+
+// función auxiliar que ejecuta docker y devuelve estructura uniforme (ya deberías tener algo parecido)
 function dockerExecArgs(args = [], timeout = 7000) {
   return new Promise((resolve) => {
     execFile('docker', args, { timeout }, (err, stdout, stderr) => {
@@ -120,17 +124,21 @@ async function measureQueryPerformance(queryFn) {
 /**
  * Devuelve los bytes exactos ocupados por un path (ej. dbfarm) dentro del contenedor.
  */
-function getMonetDbfarmBytes(containerName = 'runmonet-monetdb-1', dbPath = '/var/monetdb5/dbfarm/airline_mt') {
+function getMonetDbfarmBytes(containerName = 'runmonet-monetdb-1', dataPath = '/var/monetdb5/dbfarm/airline_mt') {
   return new Promise(async (resolve) => {
     try {
-      // pasamos el comando a 'bash -lc' como un único arg (execFile evita que Windows rompa las comillas)
-      const args = ['exec', containerName, 'bash', '-lc', `du -sb ${dbPath} 2>/dev/null || echo '0\t${dbPath}'`];
+      const args = ['exec', containerName, 'bash', '-lc', `du -sb ${dataPath} 2>/dev/null || echo '0\t${dataPath}'`];
       const res = await dockerExecArgs(args, 5000);
-      if (res.error) return resolve({ error: res.error, stderr: res.stderr });
-      const out = (res.stdout || '').trim();
-      const m = out.match(/^(\d+)\s+/);
+      if (res.error) return resolve({ error: res.message || res.code || 'error', stderr: res.stderr || '' });
+      const m = String(res.stdout || '').trim().match(/^(\d+)\s+/);
       const bytes = m ? Number(m[1]) : 0;
-      resolve({ container: containerName, path: dbPath, bytes });
+      const deltaBytes = prevMonetBytes === null ? 0 : (bytes - prevMonetBytes);
+
+      // LOG para depuración
+      console.log(`[MONET SIZE] prev=${prevMonetBytes} current=${bytes} delta=${deltaBytes}`);
+
+      prevMonetBytes = bytes;
+      resolve({ container: containerName, path: dataPath, bytes, deltaBytes });
     } catch (e) {
       resolve({ error: String(e) });
     }
@@ -140,24 +148,27 @@ function getMonetDbfarmBytes(containerName = 'runmonet-monetdb-1', dbPath = '/va
 /**
  * Obtiene tamaños (en bytes) de todas las bases de datos de PostgreSQL dentro del contenedor.
  */
-function getPostgresDatabaseSizes(containerName = 'runmonet-postgres-1', pgUser = process.env.PG_USER || 'postgres', pgDb = process.env.PG_DB || 'postgres') {
+function getPostgresDatabaseSizes(containerName = 'runmonet-postgres-1', pgUser = process.env.PG_USER || 'admin', pgDb = process.env.PG_DB || 'airline_pg') {
   return new Promise(async (resolve) => {
     try {
       const sql = `SELECT datname || '|' || pg_database_size(datname) FROM pg_database;`;
-
-      // Usa docker exec con args simples (sin -e). Tu container permite psql -U admin -d airline_pg sin PGPASSWORD.
       const args = ['exec', containerName, 'psql', '-U', pgUser, '-d', pgDb, '-At', '-c', sql];
       const res = await dockerExecArgs(args, 8000);
-
       if (res.error) {
-        // devolver detalle para que el caller lo pueda mostrar (stderr, code, message)
-        return resolve({ error: res.message || 'psql returned error', stderr: res.stderr || '', code: res.code || null });
+        return resolve({ error: res.message || 'psql returned error', stderr: res.stderr || '' });
       }
-
       const lines = String(res.stdout || '').trim().split('\n').filter(Boolean);
       const out = lines.map(l => {
         const [datname, bytesStr] = l.split('|');
-        return { datname, bytes: Number(bytesStr || 0) };
+        const bytes = Number(bytesStr || 0);
+        const prev = prevPgSizes[datname];
+        const deltaBytes = (typeof prev === 'number') ? (bytes - prev) : 0;
+
+        // LOG para depuración
+        console.log(`[PG SIZE] db=${datname} prev=${prev} current=${bytes} delta=${deltaBytes}`);
+
+        prevPgSizes[datname] = bytes;
+        return { datname, bytes, deltaBytes };
       });
       resolve(out);
     } catch (e) {
@@ -190,12 +201,4 @@ function getPostgresTableSizes(containerName = 'runmonet-postgres-1', pgUser = '
 
 // --- FIN nuevas funciones ---
 
-module.exports = {
-  getCpuUsage,
-  getMemoryUsage,
-  measureQueryPerformance,
-  getDockerStats,
-  getMonetDbfarmBytes,
-  getPostgresDatabaseSizes,
-  getPostgresTableSizes
-};
+module.exports = { getCpuUsage, getMemoryUsage, measureQueryPerformance, getDockerStats, getMonetDbfarmBytes, getPostgresDatabaseSizes };
